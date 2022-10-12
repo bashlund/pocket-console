@@ -1,0 +1,34 @@
+{
+  "name": "pocket-console",
+  "version": "0.1.0",
+  "description": "A sleak, small logging lib written in TypeScript",
+  "keywords": [
+  ],
+  "homepage": "",
+  "author": "Thomas Backlund",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bashlund/pocket-console.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bashlund/pocket-console/issues"
+  },
+  "private": false,
+  "license": "MIT",
+  "engines": {
+    "node": ">=12"
+  },
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "test": "./node_modules/.bin/testyts",
+    "c": "./node_modules/.bin/tsc",
+    "prepublishOnly": "tsc"
+  },
+  "devDependencies": {
+    "@tsconfig/node12": "^1.0.7",
+    "@types/node": "^14.17.11",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.3.5"
+  }
+}
