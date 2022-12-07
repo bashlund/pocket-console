@@ -45,9 +45,9 @@ An important feature is that options can ge globally set using `env` variables. 
 ```sh
 node -r ts-node/register ./example/example-one.ts
 
-logFormat="%c%L" node -r ts-node/register ./example/example-one.ts
+LOG_FORMAT="%c%L" node -r ts-node/register ./example/example-one.ts
 
-logLevel=none node -r ts-node/register ./example/example-one.ts
+LOG_LEVEL=none node -r ts-node/register ./example/example-one.ts
 ```
 
 It does automatic grouping for you, if you have more than one argument or the single argument is non-string.

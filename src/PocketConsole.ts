@@ -18,8 +18,8 @@
  * arguments to the logging functions.
  *
  * Options provided in to the creator function can be overridden by setting env variables.
- * process.env.level = "debug" | "info" | "warn" | "error" | "none"
- * process.env.format overrides the format string.
+ * process.env.LOG_LEVEL = "debug" | "info" | "warn" | "error" | "none"
+ * process.env.LOG_FORMAT overrides the format string.
  */
 
 export enum LogLevel {
@@ -56,6 +56,9 @@ export type PocketConsoleOptions = {
      * Default is "%t %c[%l]%C [%m] ".
      */
     format?: string,
+
+    /** If true then use useToString() functions on object if exists. */
+    useToString?: boolean,
 };
 
 export type PocketConsoleType = Console & {
@@ -63,6 +66,7 @@ export type PocketConsoleType = Console & {
     setFormat: (format: string | undefined) => void,
     setLevel: (level: LogLevel | string | undefined) => void,
     getConsole: () => Console,
+    isPocket: boolean,
 };
 
 const EMOJIS: {[level: string]: string} = {
@@ -82,72 +86,16 @@ const COLORS: {[level: string]: string} = {
     ["DEBUG"]: "\x1b[34m",
 };
 
+//@ts-ignore
+if (console.isPocket) {
+    throw new Error("Global console object is already PocketConsole.");
+}
+
 const originalConsole   = console;
 const consoleError      = console.error;
 const consoleGroup      = console.group;
 const consoleGroupEnd   = console.groupEnd;
 
-let options: PocketConsoleOptions;
-let isTerminal: boolean;
-
-const setFormat = (format: string | undefined) => {
-    if (format !== undefined) {
-        if (format.match(/^[ -~]*$/)) {
-            options.format = format;
-        }
-    }
-};
-
-const setLevel = (level: LogLevel | string | undefined) => {
-    if (level === LogLevel.DEBUG) {
-        options.level = LogLevel.DEBUG;
-    }
-    else if (level === LogLevel.INFO) {
-        options.level = LogLevel.INFO;
-    }
-    else if (level === LogLevel.WARN) {
-        options.level = LogLevel.WARN;
-    }
-    else if (level === LogLevel.NONE) {
-        options.level = LogLevel.NONE;
-    }
-    else if (level === LogLevel.ERROR) {
-        options.level = LogLevel.ERROR;
-    }
-};
-
-const error = (...args: any[]) => {
-    if ([LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR].includes(options.level!)) {
-        stderr("ERROR", ...args);
-    }
-};
-
-const warn = (...args: any[]) => {
-    if ([LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN].includes(options.level!)) {
-        stderr("WARN ", ...args);
-    }
-};
-
-const info = (...args: any[]) => {
-    if ([LogLevel.DEBUG, LogLevel.INFO].includes(options.level!)) {
-        stderr("INFO ", ...args);
-    }
-};
-
-/**
- * Same log level as INFO, but can be differently colored.
- */
-const aced = (...args: any[]) => {
-    if ([LogLevel.DEBUG, LogLevel.INFO].includes(options.level!)) {
-        stderr("ACED ", ...args);
-    }
-};
-
-const debug = (...args: any[]) => {
-    if ([LogLevel.DEBUG].includes(options.level!)) {
-        stderr("DEBUG", ...args);
-    }
-};
 
 /**
  * Return the original unaltered console object.
@@ -156,102 +104,177 @@ const getConsole = (): Console => {
     return originalConsole;
 };
 
-const stderr = (level: string, ...args: any[]) => {
-    const date = new Date();
-    const time = String(date.getFullYear()) + "-" + String(date.getMonth() + 1).padStart(2, "0") +
-        "-" + String(date.getDate()).padStart(2, "0") + "T" +
-        String(date.getHours()).padStart(2, "0") + ":" +
-        String(date.getMinutes()).padStart(2, "0") + ":" +
-        String(date.getSeconds()).padStart(2, "0");
-
-    const regEx = /^([^%]*)%(.)/;
-    let format = options.format ?? "";
-    let prefix = "";
-    let coloring=false;
-    while (true) {
-        const match = regEx.exec(format);
-        if (!match) {
-            prefix = `${prefix}${format}`;
-            break;
-        }
-        format = format.slice(match[0].length);
-        prefix = `${prefix}${match[1]}`;
-        if (match[2] === 't') {
-            prefix = `${prefix}${time}`;
-        }
-        else if (match[2] === 'l') {
-            prefix = `${prefix}${level}`;
-        }
-        else if (match[2] === 'm') {
-            prefix = `${prefix}${options.module}`;
-        }
-        else if (match[2] === 'c') {
-            if (isTerminal) {
-                prefix = `${prefix}${COLORS[level]}`;
-                coloring = true;
-            }
-        }
-        else if (match[2] === 'C') {
-            if (isTerminal) {
-                prefix = `${prefix}${COLORS.DEFAULT}`;
-                coloring = false;
-            }
-        }
-        else if (match[2] === 'L') {
-            if (isTerminal) {
-                prefix = `${prefix}${EMOJIS[level]}`;
-            }
-        }
-        else {
-            prefix = `${prefix}%`;
-        }
-    }
-
-    if (args.length === 0) {
-        consoleError(prefix);
-    }
-    else if (args.length === 1 && typeof(args[0]) === "string") {
-        consoleError(`${prefix}${args[0]}`);
-    }
-    else {
-        consoleGroup(`${prefix}${args[0]}`);  // forces toString on args[0].
-        if (typeof(args[0]) === "string") {
-            // If first arg was string, it is used for group heading above then discarded.
-            args.shift();
-        }
-        args.forEach( obj => {
-            consoleError(obj);
-        });
-        consoleGroupEnd();
-    }
-
-    if (coloring && isTerminal) {
-        consoleError(COLORS.DEFAULT);
-    }
-};
-
 export const PocketConsole = (consoleOptions?: PocketConsoleOptions): PocketConsoleType => {
-    options = {
+    const options: PocketConsoleOptions = {
         module: consoleOptions?.module ?? "",
         level: LogLevel.INFO,
         format: "%t %c[%L%l]%C [%m] ",
+        useToString: consoleOptions?.useToString ?? true,
     };
 
-    isTerminal = process?.stderr?.isTTY ?? false;
-    setLevel(process?.env?.logLevel ?? consoleOptions?.level);
-    setFormat(process?.env?.logFormat ?? consoleOptions?.format);
+    const isTerminal = process?.stderr?.isTTY ?? false;
+
+    const setFormat = (format: string | undefined) => {
+        if (format !== undefined) {
+            if (format.match(/^[ -~]*$/)) {
+                options.format = format;
+            }
+        }
+    };
+
+    const stderr = (level: string, ...args: any[]) => {
+        const date = new Date();
+        const time = String(date.getFullYear()) + "-" + String(date.getMonth() + 1).padStart(2, "0") +
+            "-" + String(date.getDate()).padStart(2, "0") + "T" +
+            String(date.getHours()).padStart(2, "0") + ":" +
+            String(date.getMinutes()).padStart(2, "0") + ":" +
+            String(date.getSeconds()).padStart(2, "0");
+
+        const regEx = /^([^%]*)%(.)/;
+        let format = options.format ?? "";
+        let prefix = "";
+        let coloring=false;
+        while (true) {
+            const match = regEx.exec(format);
+            if (!match) {
+                prefix = `${prefix}${format}`;
+                break;
+            }
+            format = format.slice(match[0].length);
+            prefix = `${prefix}${match[1]}`;
+            if (match[2] === 't') {
+                prefix = `${prefix}${time}`;
+            }
+            else if (match[2] === 'l') {
+                prefix = `${prefix}${level}`;
+            }
+            else if (match[2] === 'm') {
+                prefix = `${prefix}${options.module}`;
+            }
+            else if (match[2] === 'c') {
+                if (isTerminal) {
+                    prefix = `${prefix}${COLORS[level]}`;
+                    coloring = true;
+                }
+            }
+            else if (match[2] === 'C') {
+                if (isTerminal) {
+                    prefix = `${prefix}${COLORS.DEFAULT}`;
+                    coloring = false;
+                }
+            }
+            else if (match[2] === 'L') {
+                if (isTerminal) {
+                    prefix = `${prefix}${EMOJIS[level]}`;
+                }
+            }
+            else {
+                prefix = `${prefix}%`;
+            }
+        }
+
+        if (args.length === 0) {
+            consoleError(prefix);
+        }
+        else if (args.length === 1 && typeof(args[0]) === "string") {
+            consoleError(`${prefix}${args[0]}`);
+        }
+        else {
+            if (args[0] === null || args[0] === undefined || typeof args[0] !== "object") {
+                consoleGroup(`${prefix}${args[0]}`);  // forces toString on args[0].
+                args.shift();
+            }
+            else {
+                consoleGroup(`${prefix}`);
+            }
+
+            args.forEach( obj => {
+                if (obj.constructor !== Object && !Array.isArray(obj) && !Buffer.isBuffer(obj) && typeof obj.toString === "function" && options.useToString) {
+                    consoleError(obj.toString());
+                }
+                else {
+                    consoleError(obj);
+                }
+            });
+
+            consoleGroupEnd();
+        }
+
+        if (coloring && isTerminal) {
+            consoleError(COLORS.DEFAULT);
+        }
+    };
+
+    const setLevel = (level: LogLevel | string | undefined) => {
+        if (level === LogLevel.DEBUG) {
+            options.level = LogLevel.DEBUG;
+        }
+        else if (level === LogLevel.INFO) {
+            options.level = LogLevel.INFO;
+        }
+        else if (level === LogLevel.WARN) {
+            options.level = LogLevel.WARN;
+        }
+        else if (level === LogLevel.NONE) {
+            options.level = LogLevel.NONE;
+        }
+        else if (level === LogLevel.ERROR) {
+            options.level = LogLevel.ERROR;
+        }
+    };
+
+    const error = (...args: any[]) => {
+        if ([LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR].includes(options.level!)) {
+            stderr("ERROR", ...args);
+        }
+    };
+
+    const warn = (...args: any[]) => {
+        if ([LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN].includes(options.level!)) {
+            stderr("WARN ", ...args);
+        }
+    };
+
+    const info = (...args: any[]) => {
+        if ([LogLevel.DEBUG, LogLevel.INFO].includes(options.level!)) {
+            stderr("INFO ", ...args);
+        }
+    };
+
+    /**
+     * Same log level as INFO, but can be differently colored.
+     */
+    const aced = (...args: any[]) => {
+        if ([LogLevel.DEBUG, LogLevel.INFO].includes(options.level!)) {
+            stderr("ACED ", ...args);
+        }
+    };
+
+    const debug = (...args: any[]) => {
+        if ([LogLevel.DEBUG].includes(options.level!)) {
+            stderr("DEBUG", ...args);
+        }
+    };
+
+    setLevel(process?.env?.LOG_LEVEL ?? consoleOptions?.level);
+    setFormat(process?.env?.LOG_FORMAT ?? consoleOptions?.format);
 
     const pocketConsole: any = {};
+
     for (let p in originalConsole) {
         //@ts-ignore
         pocketConsole[p] = originalConsole[p];
     }
-    pocketConsole.error      = error;
-    pocketConsole.warn       = warn;
-    pocketConsole.debug      = debug;
-    pocketConsole.info       = info;
-    pocketConsole.aced       = aced;
-    pocketConsole.setFormat  = setFormat;
-    pocketConsole.getConsole = getConsole;
-    return pocketConsole as PocketConsoleType;
+
+    pocketConsole.error         = error;
+    pocketConsole.warn          = warn;
+    pocketConsole.debug         = debug;
+    pocketConsole.info          = info;
+    pocketConsole.aced          = aced;
+    pocketConsole.setFormat     = setFormat;
+    pocketConsole.setLevel   = setLevel;
+    pocketConsole.getConsole    = getConsole;
+    pocketConsole.isPocket      = true;
+
+    return pocketConsole;
 };
