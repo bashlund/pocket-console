@@ -72,9 +72,9 @@ export type PocketConsoleType = Console & {
 const EMOJIS: {[level: string]: string} = {
     ["ERROR"]: "\u2717 ",
     ["WARN "]: "\u2691 ",
-    ["INFO "]: "\u2605 ",
+    ["INFO "]: "\u2139 ",
     ["ACED "]: "\u2713 ",
-    ["DEBUG"]: "\u2606 ",
+    ["DEBUG"]: "\u2051 ",
 };
 
 const COLORS: {[level: string]: string} = {
