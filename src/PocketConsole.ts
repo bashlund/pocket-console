@@ -189,7 +189,7 @@ export const PocketConsole = (consoleOptions?: PocketConsoleOptions): PocketCons
             }
 
             args.forEach( obj => {
-                if (obj.constructor !== Object && !Array.isArray(obj) && !Buffer.isBuffer(obj) && typeof obj.toString === "function" && options.useToString) {
+                if (obj && obj.constructor !== Object && !Array.isArray(obj) && !Buffer.isBuffer(obj) && typeof obj.toString === "function" && options.useToString) {
                     consoleError(obj.toString());
                 }
                 else {
