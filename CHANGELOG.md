@@ -1,5 +1,9 @@
 # CHANGELOG: pocket-console
 
+## [0.3.1] - 20230117
+Fix bug about undefined args in output.  
+Change emojis for INFO and DEBUG levels.  
+
 ## [0.3.0] - 20221207
 Rename logLevel/logFormat to LOG_LEVEL/LOG_FORMAT.  
 Fix bug: when using many PocketConsole objects simultanously.  

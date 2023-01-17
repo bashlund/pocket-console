@@ -1,6 +1,6 @@
 {
   "name": "pocket-console",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A sleak & small drop-in-replacement of Console for nicer logging, written in TypeScript",
   "keywords": [
   ],
