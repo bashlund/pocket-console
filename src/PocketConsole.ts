@@ -93,9 +93,6 @@ if (console.isPocket) {
 
 const originalConsole   = console;
 const consoleError      = console.error;
-const consoleGroup      = console.group;
-const consoleGroupEnd   = console.groupEnd;
-
 
 /**
  * Return the original unaltered console object.
@@ -123,6 +120,7 @@ export const PocketConsole = (consoleOptions?: PocketConsoleOptions): PocketCons
     };
 
     const stderr = (level: string, ...args: any[]) => {
+        const terminalWidth = (isTerminal && process?.stderr?.columns) || Number.MAX_SAFE_INTEGER;
         const date = new Date();
         const time = String(date.getFullYear()) + "-" + String(date.getMonth() + 1).padStart(2, "0") +
             "-" + String(date.getDate()).padStart(2, "0") + "T" +
@@ -181,23 +179,47 @@ export const PocketConsole = (consoleOptions?: PocketConsoleOptions): PocketCons
         }
         else {
             if (args[0] === null || args[0] === undefined || typeof args[0] !== "object") {
-                consoleGroup(`${prefix}${args[0]}`);  // forces toString on args[0].
+                consoleError(`${prefix}${args[0]}`);  // forces toString on args[0].
                 args.shift();
             }
             else {
-                consoleGroup(`${prefix}`);
+                consoleError(`${prefix}`);
             }
 
             args.forEach( obj => {
-                if (obj && obj.constructor !== Object && !Array.isArray(obj) && !Buffer.isBuffer(obj) && typeof obj.toString === "function" && options.useToString) {
-                    consoleError(obj.toString());
+                if (obj && obj.constructor !== Object && !Array.isArray(obj) && !Buffer.isBuffer(obj) && typeof obj.toString === "function" && ! (obj instanceof Error) && options.useToString) {
+                    const str = obj.toString();
+
+                    if (isTerminal && terminalWidth > 1) {
+                        const lines: string[] = [];
+
+                        let i = 0;
+                        while (i < str.length) {
+                            const line = [];
+
+                            while (line.length < terminalWidth-1 && i < str.length) {
+                                const char = str[i++];
+                                if (char === "\n") {
+                                    break;
+                                }
+                                line.push(char);
+                            }
+
+                            const outStr = line.join("").trimLeft();
+
+                            if (outStr.length > 0) {
+                                consoleError("", outStr);  //obj.toString().replace(/\n/g, "\n "));
+                            }
+                        }
+                    }
+                    else {
+                        consoleError("", str);
+                    }
                 }
                 else {
-                    consoleError(obj);
+                    consoleError("", obj);
                 }
             });
-
-            consoleGroupEnd();
         }
 
         if (coloring && isTerminal) {

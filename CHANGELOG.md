@@ -1,5 +1,10 @@
 # CHANGELOG: pocket-console
 
+## [0.4.0] - 20230202
+Fix bug about wrongly using console.group for stderr output.  
+Fix bug about properly outputting Error objects.  
+Implement format grouping and string splitting on terminal width for use on stderr on terminal output.  
+
 ## [0.3.1] - 20230117
 Fix bug about undefined args in output.  
 Change emojis for INFO and DEBUG levels.  
