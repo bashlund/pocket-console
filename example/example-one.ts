@@ -49,3 +49,11 @@ console.table([{col1: "table", col2: "Works as expected"}], ["col1", "col2"]);
 console.setFormat("%c[%L%l] %t [%m]%C ");
 
 console.debug("Look here, I just changed the output format.");
+
+console.pushFormat("%c %L ");
+
+console.debug(`I just changed the output format *temporarily* using pushFormat("%c %L ").`);
+
+console.popFormat();
+
+console.debug("Changed it back using popFormat()");

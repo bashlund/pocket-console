@@ -64,6 +64,8 @@ export type PocketConsoleOptions = {
 export type PocketConsoleType = Console & {
     aced: Function;
     setFormat: (format: string | undefined) => void,
+    pushFormat: (format: string | undefined) => void,
+    popFormat: () => void,
     setLevel: (level: LogLevel | string | undefined) => void,
     getConsole: () => Console,
     isPocket: boolean,
@@ -109,6 +111,8 @@ export const PocketConsole = (consoleOptions?: PocketConsoleOptions): PocketCons
         useToString: consoleOptions?.useToString ?? true,
     };
 
+    const pushedFormats: string[] = [];
+
     const isTerminal = process?.stderr?.isTTY ?? false;
 
     const setFormat = (format: string | undefined) => {
@@ -117,6 +121,21 @@ export const PocketConsole = (consoleOptions?: PocketConsoleOptions): PocketCons
                 options.format = format;
             }
         }
+    };
+
+    const pushFormat = (format: string | undefined) => {
+        if (format !== undefined) {
+            if (format.match(/^[ -~]*$/)) {
+                if (options.format) {
+                    pushedFormats.push(options.format);
+                }
+                options.format = format;
+            }
+        }
+    };
+
+    const popFormat = () => {
+        setFormat(pushedFormats.pop());
     };
 
     const stderr = (level: string, ...args: any[]) => {
@@ -223,7 +242,7 @@ export const PocketConsole = (consoleOptions?: PocketConsoleOptions): PocketCons
         }
 
         if (coloring && isTerminal) {
-            consoleError(COLORS.DEFAULT);
+            process?.stderr?.write(COLORS.DEFAULT);
         }
     };
 
@@ -294,6 +313,8 @@ export const PocketConsole = (consoleOptions?: PocketConsoleOptions): PocketCons
     pocketConsole.info          = info;
     pocketConsole.aced          = aced;
     pocketConsole.setFormat     = setFormat;
+    pocketConsole.pushFormat    = pushFormat;
+    pocketConsole.popFormat     = popFormat;
     pocketConsole.setLevel   = setLevel;
     pocketConsole.getConsole    = getConsole;
     pocketConsole.isPocket      = true;

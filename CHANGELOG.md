@@ -1,5 +1,9 @@
 # CHANGELOG: pocket-console
 
+## [0.5.0] - 20230210
+Add push/popFormat().  
+Fix bug in resetting coloring.  
+
 ## [0.4.0] - 20230202
 Fix bug about wrongly using console.group for stderr output.  
 Fix bug about properly outputting Error objects.  
